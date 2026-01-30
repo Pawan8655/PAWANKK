@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML VIEWR ONLINE - Free Real-Time HTML, CSS, JS Editor</title>
+    <meta name="description" content="HTML VIEWR ONLINE is a professional-grade, free real-time HTML, CSS, and JavaScript editor. Test, preview, and share your web snippets instantly.">
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f111a; color: #e5e7eb; margin: 0; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        .ad-placeholder {
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1);
+            color: #4b5563; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        iframe { background: white; }
+    </style>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "react/": "https://esm.sh/react@^19.2.4/",
+        "react": "https://esm.sh/react@^19.2.4",
+        "react-router-dom": "https://esm.sh/react-router-dom@^7.2.0"
+      }
+    }
+    </script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import React, { useState, useEffect, useCallback, useRef } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { HashRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+
+        // --- Constants ---
+        const INITIAL_FILES = {
+            html: `<!DOCTYPE html>\n<html>\n<head>\n    <title>Preview</title>\n</head>\n<body>\n    <div class="card">\n        <h1>✨ HTML VIEWR ONLINE</h1>\n        <p>Edit the code tabs to see changes here!</p>\n        <button id="btn">Click Me</button>\n    </div>\n<script type="module" src="/index.tsx"></script>
+</body>\n</html>`,
+            css: `body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 80vh; background: #f0f4f8; }\n.card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }\nh1 { color: #2563eb; }\nbutton { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }`,
+            javascript: `document.getElementById('btn').addEventListener('click', () => {\n  alert('Logic is working!');\n});`
+        };
+
+        // --- Static Pages Component ---
+        const StaticPage = ({ view, onBack }) => {
+            const pages = {
+                privacy: { title: "Privacy Policy", text: "We do not store your code on our servers. Everything stays in your browser's local storage." },
+                terms: { title: "Terms of Service", text: "Free for educational and professional use. No illegal content execution allowed." },
+                disclaimer: { title: "Disclaimer", text: "Use at your own risk. We are not responsible for any security vulnerabilities in your code." },
+                contact: { title: "Contact Us", text: "For support, email: admin@htmlvieweronline.com" }
+            };
+            const current = pages[view] || { title: "Page Not Found", text: "" };
+            return (
+                <div className="p-8 max-w-4xl mx-auto min-height-[80vh]">
+                    <button onClick={onBack} className="text-blue-400 mb-6 flex items-center gap-2"><i className="fas fa-arrow-left"></i> Back</button>
+                    <h1 className="text-3xl font-bold mb-4">{current.title}</h1>
+                    <p className="text-gray-400 leading-relaxed">{current.text}</p>
+                    <div className="mt-12 ad-placeholder h-24">AdSense Placeholder</div>
+                </div>
+            );
+        };
+
+        // --- Sidebar Item ---
+        const SidebarItem = ({ icon, label, active, onClick }) => (
+            <li onClick={onClick} className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all ${active ? 'bg-blue-600/20 text-blue-400 border-l-4 border-blue-500' : 'hover:bg-white/5 text-gray-400'}`}>
+                <i className={`fas ${icon} w-5 text-center`}></i>
+                <span className="font-medium">{label}</span>
+            </li>
+        );
+
+        // --- Main Editor View ---
+        const EditorView = (props) => {
+            const { files, setFiles, activeTab, setActiveTab, previewContent, generatePreview, setIsPreviewModalOpen, zoom, setZoom } = props;
+            return (
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                    <aside className="w-64 bg-[#161925] border-r border-gray-800 p-4 hidden lg:flex flex-col">
+                        <h3 className="text-xs font-bold text-gray-500 uppercase mb-4 px-2">Files</h3>
+                        <ul className="space-y-1">
+                            <SidebarItem icon="fa-html5" label="index.html" active={activeTab === 'html'} onClick={() => setActiveTab('html')} />
+                            <SidebarItem icon="fa-css3-alt" label="style.css" active={activeTab === 'css'} onClick={() => setActiveTab('css')} />
+                            <SidebarItem icon="fa-js" label="script.js" active={activeTab === 'javascript'} onClick={() => setActiveTab('javascript')} />
+                        </ul>
+                        <div className="mt-auto ad-placeholder h-48 rounded">Ad Slot</div>
+                    </aside>
+                    <div className="flex-1 flex flex-col border-r border-gray-800">
+                        <div className="flex bg-[#1c1f2e] border-b border-gray-800">
+                            {['html', 'css', 'javascript'].map(t => (
+                                <button key={t} onClick={() => setActiveTab(t)} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === t ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent'}`}>{t.toUpperCase()}</button>
+                            ))}
+                        </div>
+                        <textarea 
+                            value={files[activeTab]} 
+                            onChange={e => setFiles({...files, [activeTab]: e.target.value})}
+                            className="flex-1 bg-[#11131f] text-gray-300 p-4 code-font outline-none resize-none"
+                        />
+                        <div className="p-4 bg-[#161925] flex gap-2 overflow-x-auto">
+                            <button onClick={() => generatePreview(files)} className="bg-emerald-600 px-4 py-2 rounded text-xs font-bold whitespace-nowrap"><i className="fas fa-play"></i> RUN</button>
+                            <button onClick={() => setIsPreviewModalOpen(true)} className="bg-indigo-600 px-4 py-2 rounded text-xs font-bold whitespace-nowrap"><i className="fas fa-desktop"></i> PREVIEW</button>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex flex-col bg-white overflow-hidden">
+                        <div className="ad-placeholder h-[60px]">Banner Ad</div>
+                        <div className="bg-gray-100 p-2 flex justify-between items-center border-b">
+                            <span className="text-xs text-gray-400 ml-2">preview.localhost</span>
+                            <div className="flex gap-2">
+                                <button onClick={() => setZoom(z => Math.max(0.2, z-0.1))} className="text-gray-500 px-2"><i className="fas fa-search-minus"></i></button>
+                                <button onClick={() => setZoom(1)} className="text-[10px] font-bold text-gray-500">{Math.round(zoom*100)}%</button>
+                                <button onClick={() => setZoom(z => Math.min(2, z+0.1))} className="text-gray-500 px-2"><i className="fas fa-search-plus"></i></button>
+                            </div>
+                        </div>
+                        <div className="flex-1 relative overflow-hidden">
+                            <iframe 
+                                srcDoc={previewContent} 
+                                className="w-full h-full border-none absolute top-0 left-0"
+                                style={{ transform: `scale(${zoom})`, transformOrigin: '0 0', width: `${100/zoom}%`, height: `${100/zoom}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+        const App = () => {
+            const [files, setFiles] = useState(() => JSON.parse(localStorage.getItem('viewer-save')) || INITIAL_FILES);
+            const [activeTab, setActiveTab] = useState('html');
+            const [previewContent, setPreviewContent] = useState('');
+            const [zoom, setZoom] = useState(1);
+            const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+            const navigate = useNavigate();
+            const location = useLocation();
+
+            const generatePreview = useCallback((currentFiles) => {
+                const combined = `<!DOCTYPE html><html><head><style>${currentFiles.css}</style></head><body>${currentFiles.html}<script>${currentFiles.javascript}<\/script></body></html>`;
+                setPreviewContent(combined);
+            }, []);
+
+            useEffect(() => { generatePreview(files); }, [files, generatePreview]);
+
+            const handleSave = () => {
+                localStorage.setItem('viewer-save', JSON.stringify(files));
+                alert('Project Saved Locally!');
+            };
+
+            return (
+                <div className="flex flex-col min-h-screen">
+                    <div className="ad-placeholder h-12">Header Ad</div>
+                    <header className="flex justify-between items-center px-6 py-4 bg-[#161925] border-b border-gray-800 shadow-xl">
+                        <Link to="/" className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center"><i className="fas fa-code text-white"></i></div>
+                            <div><h1 className="text-xl font-bold text-white">HTML VIEWR ONLINE</h1><p className="text-[10px] text-gray-500 font-bold uppercase">Pro Editor</p></div>
+                        </Link>
+                        <nav className="flex gap-4 text-sm font-medium">
+                            <Link to="/contact" className="text-gray-400 hover:text-white">Contact</Link>
+                            <Link to="/privacy" className="text-gray-400 hover:text-white">Privacy</Link>
+                            <button onClick={handleSave} className="bg-blue-600 px-4 py-2 rounded text-white active:scale-95"><i className="fas fa-save"></i> Save</button>
+                        </nav>
+                    </header>
+                    <main className="flex-1 flex overflow-hidden">
+                        <Routes>
+                            <Route path="/" element={<EditorView {...{files, setFiles, activeTab, setActiveTab, previewContent, generatePreview, setIsPreviewModalOpen, zoom, setZoom}} />} />
+                            <Route path="/privacy" element={<StaticPage view="privacy" onBack={() => navigate('/')} />} />
+                            <Route path="/terms" element={<StaticPage view="terms" onBack={() => navigate('/')} />} />
+                            <Route path="/disclaimer" element={<StaticPage view="disclaimer" onBack={() => navigate('/')} />} />
+                            <Route path="/contact" element={<StaticPage view="contact" onBack={() => navigate('/')} />} />
+                        </Routes>
+                    </main>
+                    {isPreviewModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+                            <div className="bg-white w-full h-full rounded-xl flex flex-col overflow-hidden">
+                                <div className="p-4 bg-gray-100 flex justify-between border-b">
+                                    <h3 className="font-bold text-gray-700">Full Preview</h3>
+                                    <button onClick={() => setIsPreviewModalOpen(false)} className="text-red-500 text-xl"><i className="fas fa-times"></i></button>
+                                </div>
+                                <iframe srcDoc={previewContent} className="flex-1 border-none" />
+                            </div>
+                        </div>
+                    )}
+                    <footer className="bg-[#0a0c14] border-t border-gray-900 p-6 flex flex-col items-center gap-4">
+                        <div className="flex gap-6 text-[10px] text-gray-500 font-bold uppercase">
+                            <Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/contact">Contact</Link>
+                        </div>
+                        <div className="ad-placeholder h-20 w-full max-w-xl">Footer Ad Slot</div>
+                        <p className="text-[10px] text-gray-700">© 2024 HTML VIEWR ONLINE • PRO VERSION</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<HashRouter><App /></HashRouter>);
+    </script>
+</body>
+</html>
