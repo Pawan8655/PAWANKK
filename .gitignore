@@ -1,0 +1,10 @@
+# See https://git.io/vbNdB
+.DS_Store
+node_modules/
+build/
+.vite/
+.env
+
+# Logs
+logs/
+npm-debug.log*
